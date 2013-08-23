@@ -1,0 +1,962 @@
+
+
+
+            Vert.x
+
+
+                    Tasveer Singh
+                        Taz
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    Vert.x is a lightweight, high performance application
+    platform for the JVM that's designed for modern mobile,
+    web, and enterprise applications.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    How does it work?
+
+Verticle                             Modules
+  - Package of Code                    - Collection of Verticles
+  - Execute Concurrently
+  - Cross Network Partitions
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    What does a Verticle look like?
+
+// simple_verticle.js
+var server = require("vertx").createHttpServer();
+
+server.requestHandler(function(request) {
+  request.response.end("Hello, Toronto JavaScript!");
+}).listen(8000);
+
+
+Run it with:
+vertx run simple_verticle.js
+
+Test it with:
+curl http://localhost:8000/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    Wait a minute... That looks like it's Event Driven!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    ... it is!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    Event Driven Architecture
+
+Define Handlers to respond to Events.
+  - DOM Events (i.e. "onclick", "onload", etc.)
+
+Event Loop
+  1. Are there any events?
+  2. If so, call the event handler
+    - Event handler does its thing
+    - Yields back to Event Loop
+  3. Back to #1
+
+Advantages & disadvantages?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    Multithreaded Architecture
+
+"Threads" respond to Events
+  - Execute concurrently
+  - System "schedules" Threads
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    Event Driven vs Multithreaded
+
+Event Driven Advantages
+  - Can handle lots of events
+    - Great for IO bound applications (e.g. web apps!)
+  - Can spin off multiple processes for concurrency
+  - Event handlers are generally single threaded
+    - Don't have to worry about "threadsafety"
+
+Disadvantages
+  - Have to share data between processes
+  - Handlers can block the event loop
+    - App becomes unresponsive
+
+Multithreaded Advantages
+  - Can execute truly in parallel
+    - Great for parallelizable CPU bound applications
+      (e.g. calculating Fibonacci)
+  - Not blocked by application
+  - Data is shared between threads
+    - Can also be a downside
+
+Disadvantages
+  - System needs to schedule all these Threads
+  - Have to worry about threadsafety
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    Ok that's great... What does Vert.x do?
+
+Multiple Event Loops
+  - 1 per CPU core in its own Thread
+    - Benefits of Event Driven Architecture
+    - Does not get blocked by the application
+
+Verticles are distributed across Event Loops
+
+// Deploy multiple Verticles programatically
+var container = require("vertx/container");
+//                              name           config   instances
+container.deployVerticle("simple_verticle.js",   {},       10);
+
+
+// Or from the command line
+vertx run simple_verticle.js -instances 10
+
+
+Test it with:
+ab -n 1000 -c 10 http://127.0.0.1:8000/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    You mentioned that it crosses Network Partitions earlier...?
+
+Vert.x uses Hazelcast behind the scenes to connect Event Loops
+into a cluster.
+
+It's kind of like Erlang's concurrency model on the JVM.
+  - "Actors" speak to each other via message passing.
+  - Want more concurrency? Just add more Actors!
+
+Code can easily be hot swapped without stopping the entire system.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    What does all this mean?
+
+// Let's define a Handler on the Event Bus:
+// handler.js
+var vertx = require("vertx")
+  , console = require("vertx/console");
+
+vertx.eventBus.registerHandler("polite_handler",
+function(message, replier) {
+
+  replier("Hello from JS!");
+});
+
+console.log("handler registered");
+
+// And a web server to make HTTP calls to it:
+// app.js
+var vertx = require("vertx")
+  , console = require("vertx/console");
+
+vertx.createHttpServer().requestHandler(function(request) {
+  vertx.eventBus.send("polite_handler", {}, function(reply) {
+    request.response.end(reply);
+  });
+}).listen(8000);
+
+console.log("server started");
+
+// Note the calls to the Vert.x Event Bus
+
+// Start them with:
+vertx run app.js -cluster
+vertx run handler.js -cluster
+
+// Test hot swapping with
+vertx run sender.js
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    mindplosion.jpg
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    That's the basics of Vert.x...
+    but it can certainly do a whole lot more.
+
+http://vertx.io/docs.html
+https://modulereg.vertx.io/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    Polyglot
+
+Since Vert.x is on the JVM, it can use any JVM based language:
+  - Java
+  - JavaScript
+  - CoffeeScript
+  - Ruby
+  - Scala
+  - Clojure
+  - Python
+  - Groovy
+  - etc.
+
+Write Verticles in any of these languages!
+  - Can write a Verticle in JavaScript
+  - If it becomes a bottleneck, rewrite it a faster language
+
+Do you like a certain library in a certain language?
+Use it!
+
+I like Ruby. Let's deploy a Ruby verticle alongside our
+JavaScript ones:
+
+require "vertx"
+
+Vertx::EventBus.register_handler "polite_handler" do |message|
+  message.reply "Hello from Ruby!"
+end
+
+puts "ruby handler registered"
+
+Run it with:
+vertx run app.js -cluster
+vertx run handler.js -cluster
+vertx run handler.rb -cluster
+
+Test it with:
+vertx run sender.js
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    But... Ruby isn't Async?!
+    What happens if I use my favourite Ruby library??
+    Isn't that going to block my Event Loop!?
+
+    (╯°□°）╯︵ ┻━┻)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    Chill dude(tte)! That's what Worker Verticles are for!
+
+Worker Verticles are deployed to a separate Thread Pool
+outside of the Event Loop.
+
+You can have blocking code as much as you want but it won't
+block the Event Loop.
+
+They're still clusterable and conform to the same API.
+You're just letting Vert.x know that it has Event Loop blocking
+code in it.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    whew.png
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    In the talk's abstract in the event announcement,
+    you mention WebSockets.
+    What's up with that?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    Vert.x SockJS Bridge
+
+You can have conventional WebSocket support in Vert.x and it
+works well.
+
+Vert.x has awesome support bridging the Event Loop over to the
+Client via SockJS:
+// socket_app.js
+var vertx = require("vertx")
+  , console = require("vertx/console")
+  , server = vertx.createHttpServer();
+
+server.requestHandler(function(request) {
+  vertx.eventBus.send("polite_handler", {}, function(reply) {
+    request.response.end(reply);
+  });
+});
+
+var sockServer = vertx.createSockJSServer(server);
+
+sockServer.bridge(
+  { prefix: "/eventbus" }
+// incoming
+, [
+    {
+      address: "polite_handler"
+    }
+  ]
+// outgoing
+, [
+    {
+      address: "polite_handler"
+    }
+  ]
+);
+
+server.listen(8000);
+
+console.log("server listening");
+
+// index.html
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="http://cdn.sockjs.org/sockjs-0.3.4.min.js"></script>
+    <script src="lib/vertxbus.js"></script>
+    <script>
+      var eventBus = new vertx.EventBus(
+        "http://localhost:8000/eventbus");
+
+      eventBus.onopen = function() {
+        eventBus.registerHandler("polite_handler",
+          function(message, replier) {
+
+          replier("Hello from the Client!");
+        });
+
+        eventBus.send("polite_handler", {}, function(reply) {
+          console.log(reply);
+        });
+      };
+    </script>
+  </head>
+  <body>
+  </body>
+</html>
+
+
+Run it:
+vertx run socket_app.js
+open index.html
+
+Test it:
+vertx run sender.js
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    How do I test this?
+
+This may not be the "ideal" way to test this, but this is
+how I do it.
+
+Since you can define a Verticle on the server or on the client and
+it's accessible from the client as long as you give it permission,
+why not test everything on the client?
+
+Shouldn't be a problem since you all test your client side code!
+trollface.jpg
+
+If all the tests are in JavaScript, front-end devs can write tests
+that
+server-side devs need to conform to and vice-versa.
+Everyone is on the same page.
+
+// tests.html
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Vert.x Tests</title>
+    <link rel="stylesheet" href="lib/mocha.css" />
+  </head>
+  <body>
+    <div id="mocha"></div>
+
+    <script src="http://cdn.sockjs.org/sockjs-0.3.4.min.js"></script>
+    <script src="lib/vertxbus.js"></script>
+    <script src="lib/chai.js"></script>
+    <script src="lib/mocha.js"></script>
+    <script>
+      mocha.setup("bdd");
+
+      var expect = chai.expect
+        , eventBus;
+
+      beforeEach(function(done) {
+        eventBus = new vertx.EventBus("http://localhost:8000/eventbus");
+        eventBus.onopen = done;
+      });
+
+      afterEach(function(done) {
+        eventBus.onclose = done;
+        eventBus.close();
+      });
+
+      describe("polite_handler", function() {
+        it("is polite to JS", function(done) {
+          eventBus.send("polite_handler", {}, function(reply) {
+            expect(reply).to.equal("Hello from JS!");
+
+            done();
+          });
+        });
+
+        it("is polite to Ruby", function(done) {
+          eventBus.send("polite_handler", {}, function(reply) {
+            expect(reply).to.equal("Hello from Ruby!");
+
+            done();
+          });
+        });
+      });
+    </script>
+    <script>
+      mocha.checkLeaks();
+      mocha.globals(['vertx']);
+      mocha.run();
+    </script>
+  </body>
+</html>
+
+Demo:
+vertx run socket_app.js -cluster
+vertx run handler.js -cluster
+vertx run handler.rb -cluster
+open tests.html
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    Other things I like about Vert.x
+
+On the JVM
+  - Robust Virtual Machine
+  - Lots of great tools
+    - VisualVM
+
+Built on solid foundations
+  - Hazelcast
+  - Netty
+    - Did well in TechEmpower's Framework Benchmarks
+  - Skilled Team
+    - Tim Fox
+      - Previously JBoss Messaging Lead
+        - JBoss has great messaging
+    - Norman Maurer
+      - Netty core team
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          That's it folks!
+
+
+          Any questions?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          Thanks!
+
+         @tazsingh
+
+      taz@torontojs.com

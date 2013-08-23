@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="http://cdn.sockjs.org/sockjs-0.3.4.min.js"></script>
+    <script src="lib/vertxbus.js"></script>
+    <script>
+      var eventBus = new vertx.EventBus("http://localhost:8000/eventbus");
+
+      eventBus.onopen = function() {
+        eventBus.registerHandler("polite_handler", function(message, replier) {
+          replier("Hello from the Client!");
+        });
+
+        eventBus.send("polite_handler", {}, function(reply) {
+          console.log(reply);
+        });
+      };
+    </script>
+  </head>
+  <body>
+  </body>
+</html>

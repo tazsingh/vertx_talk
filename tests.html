@@ -1,0 +1,54 @@
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Vert.x Tests</title>
+    <link rel="stylesheet" href="lib/mocha.css" />
+  </head>
+  <body>
+    <div id="mocha"></div>
+
+    <script src="http://cdn.sockjs.org/sockjs-0.3.4.min.js"></script>
+    <script src="lib/vertxbus.js"></script>
+    <script src="lib/chai.js"></script>
+    <script src="lib/mocha.js"></script>
+    <script>
+      mocha.setup("bdd");
+
+      var expect = chai.expect
+        , eventBus;
+
+      beforeEach(function(done) {
+        eventBus = new vertx.EventBus("http://localhost:8000/eventbus");
+        eventBus.onopen = done;
+      });
+
+      afterEach(function(done) {
+        eventBus.onclose = done;
+        eventBus.close();
+      });
+
+      describe("polite_handler", function() {
+        it("is polite to JS", function(done) {
+          eventBus.send("polite_handler", {}, function(reply) {
+            expect(reply).to.equal("Hello from JS!");
+
+            done();
+          });
+        });
+
+        it("is polite to Ruby", function(done) {
+          eventBus.send("polite_handler", {}, function(reply) {
+            expect(reply).to.equal("Hello from Ruby!");
+
+            done();
+          });
+        });
+      });
+    </script>
+    <script>
+      mocha.checkLeaks();
+      mocha.globals(['vertx']);
+      mocha.run();
+    </script>
+  </body>
+</html>
